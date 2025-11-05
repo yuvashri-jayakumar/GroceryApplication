@@ -1,0 +1,298 @@
+Queries
+
+
+
+db.products.updateOne(
+  {  name: "Cashew Nuts" },
+  {
+    $set:
+      {
+        productId: 21,
+    name: "Cashew Nuts",
+    category: "Nuts and Spices",
+    subcategory: "Nuts",
+    brand: "Local Farm",
+    unitSize: "100 g",
+    price: 75,
+    stockQty: 60,
+    description: "Fresh Cashew nuts"
+      }
+  },
+  { upsert: true }
+)
+
+
+
+db.posts.aggregate([
+  // Stage 1: Only find documents that have more than 1 like
+  {
+    $match: { likes: { $gt: 1 } }
+  },
+  // Stage 2: Group documents by category and sum each categories likes
+  {
+    $group: { _id: "$category", totalLikes: { $sum: "$likes" } }
+  }
+])
+
+db.products.aggregate([
+
+{
+	$match:{ price : {$gt : 100}}
+	},
+
+	{
+	$group: { _id:"$category", totalQuantity: { $sum: "$stockQty"}}
+	}
+	])
+
+
+	db.products.aggregate([
+  {
+    $project: {
+      "name": 1,
+      "cuisine": 1,
+      "address": 1
+    }
+  },
+  {
+    $limit: 5
+  }
+])
+
+
+db.products.aggregate([
+   { $addFields: { avgQty: { $avg: "$stockQty" } }},
+  {
+    $project: {
+	  "category":1,
+      "avgQty": 1
+    }
+  },
+  {
+    $limit: 5
+  }
+])
+
+
+db.products.aggregate([
+ { $match : {"category" : "Food"}},
+ {$count : "totalCountFood"}
+ ])
+
+#################################################
+
+✅ 1. propagation
+
+Propagation defines how a method behaves when it’s called inside an existing transaction.
+
+Propagation Type	Meaning / Example
+REQUIRED (default)	Use the existing transaction, or create a new one if none exists.
+REQUIRES_NEW	Always start a new transaction; suspend existing one.
+SUPPORTS	Join existing transaction if present; otherwise execute non-transactionally.
+NOT_SUPPORTED	Suspend existing transaction; execute non-transactionally.
+MANDATORY	Must run within existing transaction; throw exception if none exists.
+NEVER	Must run outside a transaction; throw exception if transaction exists.
+NESTED	Run within a nested transaction if there’s an existing transaction.
+
+Example:
+
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void updateStock(Product product) {
+    // This runs in a new transaction
+}
+
+✅ 2. isolation
+
+Isolation defines how this transaction is isolated from others, especially in concurrent environments.
+
+Isolation Level	Meaning / Use Case
+DEFAULT	Use DB default (usually READ_COMMITTED)
+READ_UNCOMMITTED	Can read uncommitted changes (dirty reads)
+READ_COMMITTED	Only reads committed changes (default for many DBs)
+REPEATABLE_READ	Reads same row multiple times → consistent during tx
+SERIALIZABLE	Full isolation → transactions executed sequentially
+
+Example:
+
+@Transactional(isolation = Isolation.SERIALIZABLE)
+public void placeOrder(Order order) { ... }
+
+
+Use higher isolation for critical operations like stock deduction to prevent race conditions.
+
+✅ 3. rollbackFor and noRollbackFor
+
+rollbackFor → specify which checked or unchecked exceptions should trigger rollback
+
+noRollbackFor → specify exceptions that should not trigger rollback
+
+Example:
+
+@Transactional(rollbackFor = { Exception.class }) // Rollback even for checked exceptions
+public void processPayment(Payment payment) { ... }
+
+
+By default, Spring only rolls back for unchecked exceptions (RuntimeException, Error).
+
+✅ 4. readOnly
+
+Marks a transaction read-only → optimized by Spring or DB.
+
+Useful for query operations where no changes are made.
+
+Example:
+
+@Transactional(readOnly = true)
+public List<Product> getAllProducts() {
+    return productRepository.findAll();
+}
+
+
+Benefits:
+
+Some DBs can optimize locking for read-only transactions.
+
+Reduces accidental write operations.
+
+✅ 5. timeout
+
+Maximum time in seconds a transaction can run.
+
+If exceeded, transaction is rolled back.
+
+@Transactional(timeout = 5)  // 5 seconds max
+public void longRunningOperation() { ... }
+
+
+Useful to avoid hanging operations, e.g., batch updates.
+
+✅ 6. transactionManager
+
+Specifies which transaction manager bean to use if you have multiple DBs.
+
+@Transactional(transactionManager = "mongoTransactionManager")
+public void updateMongoStock() { ... }
+
+✅ Summary
+Property	Purpose
+propagation	How transaction behaves with existing transaction
+isolation	How concurrent transactions are isolated
+rollbackFor	Which exceptions trigger rollback
+noRollbackFor	Exceptions that don’t trigger rollback
+readOnly	Optimize for read-only operations
+timeout	Max duration of transaction
+transactionManager	Specify which transaction manager to use (useful for multiple DBs)
+
+
+###################################################################
+
+MongoRepository - Simple CRUD Operations
+MongoTempalte -- COmplex Queries
+
+
+
+@Query
+Write custom MongoDB queries
+Filter by specific fields, nested queries
+
+
+@Update
+Perform update operations directly in MongoDB
+$set, $push, $pull, $inc, etc
+
+@Aggregation
+Run aggregation pipeline queries
+Grouping, lookups, projections
+
+@DeleteQuery
+Delete using custom filter
+Conditional deletes
+
+@Meta
+Add query metadata like limit/sort
+Pagination and performance tuning
+
+@Field
+Map Java field to Mongo field
+Rename fields
+
+
+🔹 1. @Query – Custom find queries
+
+Used to define custom find queries directly using MongoDB syntax.
+
+@Query("{ 'email': ?0 }")
+Customer findByEmail(String email);
+
+
+✅ ?0 refers to the first method parameter
+✅ Works for filtering documents
+✅ Read-only (select operations)
+
+🔹 2. @Update – Mongo update operations
+
+Used along with @Query to update data without loading the document.
+
+@Query("{ '_id': ?0 }")
+@Update("{ '$push': { 'addresses': ?1 } }")
+void addAddress(String customerId, Address address);
+
+
+✅ Performs direct updates
+✅ Supports Mongo operators like $set, $push, $pull, $inc, $unset, $addToSet
+✅ Efficient — no loading and saving full object
+✅ Introduced in Spring Data MongoDB 4.0+
+
+🔹 @Update Examples
+➤ Update a field
+@Query("{ '_id': ?0 }")
+@Update("{ '$set': { 'phone': ?1 } }")
+void updatePhone(String customerId, String phone);
+
+➤ Remove from array
+@Query("{ '_id': ?0 }")
+@Update("{ '$pull': { 'addresses': { 'type': ?1 } } }")
+void deleteAddressByType(String customerId, String type);
+
+➤ Increment field
+@Query("{ '_id': ?0 }")
+@Update("{ '$inc': { 'loyaltyPoints': ?1 } }")
+void addPoints(String customerId, int points);
+
+🔹 3. @Aggregation
+
+Used for MongoDB aggregation pipeline queries.
+
+@Aggregation("{ $group: { _id: '$city', count: { $sum: 1 } } }")
+List<Object> groupByCity();
+
+🔹 4. @DeleteQuery
+
+Used for delete queries without loading entities.
+
+@DeleteQuery("{ 'email': ?0 }")
+void deleteByEmail(String email);
+
+🔹 5. @Meta
+
+Used to add metadata like limit or sort.
+
+@Query("{}")
+@Meta(limit = 5)
+List<Customer> findTop5Customers();
+
+🔹 6. @Field
+
+Maps Java field to a different MongoDB field name.
+
+@Field("mobile_number")
+private String phone;
+
+✅ Summary Table
+Annotation	Purpose
+@Query	Filter documents (find)
+@Update	Modify documents using MongoDB operators
+@Aggregation	Run aggregation pipeline
+@DeleteQuery	Delete using custom filter
+@Meta	Add limit/sort options
+@Field	Rename fields
