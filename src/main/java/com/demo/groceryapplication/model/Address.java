@@ -11,6 +11,15 @@ public class Address {
     private String type;
     private boolean isDefault;
 
+    public Address(String doorNo, String street, String area, String city, String state, String pincode, String type) {
+        this.doorNo = doorNo;
+        this.street = street;
+        this.area = area;
+        this.city = city;
+        this.state = state;
+        this.pincode = pincode;
+        this.type = type;
+    }
 
     public String getArea() {
         return area;

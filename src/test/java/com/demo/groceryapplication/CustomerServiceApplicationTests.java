@@ -3,41 +3,34 @@ package com.demo.groceryapplication;
 import com.demo.groceryapplication.model.Address;
 import com.demo.groceryapplication.model.Customer;
 import com.demo.groceryapplication.repo.CustomerRepository;
+import com.demo.groceryapplication.service.CustomerService;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Date;
 import java.util.List;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-class GroceryApplicationTests {
+import static org.assertj.core.api.Assertions.assertThat;
 
-    @Test
-    void contextLoads() {
-    }
+@SpringBootTest
+public class CustomerServiceApplicationTests {
 
     @Autowired
-    private MockMvc mockMvc;
+    private CustomerService customerService;
 
     @Autowired
     private CustomerRepository customerRepository;
 
+    private Customer testCustomer;
 
     @BeforeEach
     void setup() {
         customerRepository.deleteAll();
 
-        Customer testCustomer = new Customer();
         testCustomer = new Customer();
         testCustomer.setName("yuva");
         testCustomer.setEmail("yuva@gmail.com");
@@ -51,14 +44,25 @@ class GroceryApplicationTests {
     }
 
     @Test
-    void shouldReturnAllCustomersWithJsonPath() throws Exception {
+    void shouldReturnAllCustomers(){
 
-        mockMvc.perform(get("/api/customers")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1)).
-                andExpect(jsonPath("$[0].name").value("yuva"));
-
-
+       List<Customer> customers = customerService.findAll();
+       assertThat(customers).hasSize(1);
     }
+
+    @Test
+    void shouldAddCustomer(){
+        Customer newCustomer = new Customer();
+        newCustomer.setName("magil");
+        newCustomer.setEmail("magil@gmail.com");
+        newCustomer.setPhone("123456");
+        newCustomer.setCreatedAt(new Date());
+        Customer savedCustomer  = customerService.addCustomer(newCustomer);
+        assertThat(savedCustomer.getId()).isNotZero();
+        assertThat(customerService.findAll()).hasSize(2);
+    }
+
+
+
+
 }

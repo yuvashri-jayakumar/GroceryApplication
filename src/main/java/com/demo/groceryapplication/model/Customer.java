@@ -18,6 +18,23 @@ public class Customer {
     private List<Address> addresses;
     private Date createdAt;
 
+    public Customer() {
+    }
+
+    public Customer(long id, String email, String phone) {
+        this.id = id;
+        this.email = email;
+        this.phone = phone;
+    }
+
+    public Customer(String name, String email, String phone, List<Address> addresses, Date createdAt) {
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.addresses = addresses;
+        this.createdAt = createdAt;
+    }
+
 
     public long getId() {
         return id;
